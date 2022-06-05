@@ -292,7 +292,7 @@ r2 <- mask(r1, limite_urbano, inverse = T)
 plot(r2, main = "Elevación del Terreno entre Cunco y el Lago Collico")
 ```
 
-Al analizar el mapa obtenido se observa que el lago Collico presenta una alta variabilidad en la elevación del terreno por su zona noreste y una baja variabilidad en el area noroeste. De esta manera, el mapa sugiere que las zonas de fácil acceso tomando en consideración la elevación del terreno se encuentran por la zona noroeste del lago. La vía de la S-75 bordea al lago por esta zona, pero se encuentra cerca del lago y no en la zona de más alta elevación. Por lo anterior, se le asigna un puntaje de 2 en esta categoría, lo que implica que hay zonas elevanas pero estas no dificultan demasiado el acceso a la zona.
+Al analizar el mapa obtenido se observa que el lago Collico presenta una alta variabilidad en la elevación del terreno por su zona noreste y una baja variabilidad en el area noroeste. De esta manera, el mapa sugiere que las zonas de fácil acceso tomando en consideración la elevación del terreno se encuentran por la zona noroeste del lago. La vía de la S-75 bordea al lago por esta zona, pero se encuentra cerca del lago y no en la zona de más alta elevación. Por lo anterior, se le asigna un puntaje de 2 en esta categoría, lo que implica que hay zonas elevadas pero estas no dificultan demasiado el acceso a la zona.
 
 ### Puntaje final
 
