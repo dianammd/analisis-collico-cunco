@@ -24,20 +24,20 @@ Para el presente informe se selecciona como ecosistema el lago Collico, localiza
 Con el propósito de estimar la accesibilidad del lago desde Cunco se define "accesibilidad", en líneas generales, como el nivel de dificultad para llegar desde Cunco al lago, lo cual está determinado por la cantidad de vías de acceso desde el centro urbano al ecosistema, el riesgo que representan las obstrucciones o cierres de vías y el nivel de elevación del terreno en el área. Para medirla se obtendrá un score con valores del 0 al 3, el cual se calculará como el promedio de los puntajes asignados en los tres aspectos mencionados: rutas, obstrucciones y elevación del terreno, para los cuales se realizará un análisis y se asignará un valor (0, 1, 2 o 3) según los criterios definidos en cada caso. Según ese puntaje, la accesibilidad se definirá de la siguiente manera:
 
 | Valores |                                   Significado                                    |
-|:-----------------:|:---------------------------------------------------:|
+|:------------:|:--------------------------------------------------------:|
 |    0    |           Accesibilidad nula, no existe forma de llegar al ecosistema            |
 |  (0,1]  |    Accesibilidad baja, existen muchas dificultades para llegar al ecosistema     |
 |  (1,2]  |   Accesibilidad media, existen algunas dificultades para llegar al ecosistema    |
 |  (2,3]  | Accesibilidad alta, existen pocas o nulas dificultades para llegar al ecosistema |
 
-A continuación se defininen los criterios utilizados para la evaluación de cada aspecto considerado.
+A continuación se definen los criterios utilizados para la evaluación de cada aspecto considerado.
 
 ### Rutas
 
 Se considera la cantidad de rutas que permiten llegar directamente desde el centro urbano hasta el lago, para esto se toman en cuenta las calles principales y secundarias que llevan hasta la periferia del lago.
 
 | Valores |                                  Significado                                  |
-|:-----------------:|:---------------------------------------------------:|
+|:------------:|:--------------------------------------------------------:|
 |    0    |     No hay rutas que permitan llegar al ecosistema desde el centro urbano     |
 |    1    |    Existe una única ruta para llegar al ecosistema desde el centro urbano     |
 |    2    |  Existen entre 2 y 3 rutas para llegar al ecosistema desde el centro urbano   |
@@ -45,10 +45,10 @@ Se considera la cantidad de rutas que permiten llegar directamente desde el cent
 
 ### Obstrucciones
 
-Se evalua la cantidad mínima de obstrucciones, es decir, corte u obstaculización de alguna ruta, que impedirían por completo llegar al ecosistema. Para la asignación de los puntajes se utiliza el siguiente criterio:
+Se evalúa la cantidad mínima de obstrucciones, es decir, corte u obstaculización de alguna ruta, que impedirían por completo llegar al ecosistema. Para la asignación de los puntajes se utiliza el siguiente criterio:
 
 | Valores |                                  Significado                                  |
-|:-----------------:|:---------------------------------------------------:|
+|:------------:|:--------------------------------------------------------:|
 |    0    |                   El ecosistema está obstruido naturalmente                   |
 |    1    |      Es necesaria una obstrucción para impedir la llegada al ecosistema       |
 |    2    |    Son necesarias dos obstrucciones para impedir la llegada al ecosistema     |
@@ -59,7 +59,7 @@ Se evalua la cantidad mínima de obstrucciones, es decir, corte u obstaculizaci�
 Se toma en cuenta el nivel de elevación del terreno en las zonas que rodean al ecosistema, así como también en las zonas entre el centro urbano y el lago, ya que se considera que la presencia de áreas de relieve muy variado o de alta elevación dificultan la accesibilidad al lugar. El criterio de asignación de puntaje definido es el siguiente:
 
 | Valores |                                                        Significado                                                         |
-|:-----------------:|:---------------------------------------------------:|
+|:----------:|:----------------------------------------------------------:|
 |    0    |                                La elevación del terreno bloquea por completo al ecosistema                                 |
 |    1    | La elevación del terreno dificulta en gran medida el acceso (Ej: todas o la mayoría de las rutas pasan por zonas elevadas) |
 |    2    |          Hay zonas elevadas que no afectan demasiado el acceso (Ej: alguna(s) ruta(s) pasa(n) por zonas elevadas)          |
@@ -71,7 +71,7 @@ Cabe mencionar que una limitación importante de este estudio es que la forma de
 
 Para la detección de ecosistemas, en primer lugar, se inicializa Google Earth Engine para poder obtener las imágenes de los satélites. Posteriormente, se define la región de interés a analizar, que en este caso corresponde al Lago Collico y sus alrededores, por lo que se toman como base las coordenadas de un punto central dentro del lago y se define un área de buffer alrededor.
 
-```{r echo=FALSE}
+```{r echo=FALSE, message=FALSE}
 
 pacman::p_load(tidyverse, rgee, sf, raster, tmap) 
 
@@ -79,7 +79,7 @@ ee_Initialize(drive = T)
 ```
 
 ```{r message=FALSE, warning=FALSE, error=FALSE}
-# Se selecciona el área de estudio
+# Se selecciona el ecosistema
 roi <- 
   c( -71.9745410, -39.086577) %>%  # Se le pasan coordenadas del Lago Collico
   st_point(dim = "XYZ") %>% 
@@ -99,7 +99,7 @@ df_disponible <- ee_get_date_ic(disponible)%>%
 escena <- df_disponible$id[10]
 ```
 
-Se extraen las bandas B2, B3 y B4 que corresponden al azul, verde y rojo respectivamente, las cuales se utilizarán para mostrar la imagen real del lago. Por otra parte, para la detección del ecosistema se usará el Normalized Difference Water Index (NDWI) ya que este permite la detección de cuerpos de agua, y por lo tanto se extrae también la banda B5 que es necesaria para este cálculo. A continuación se muestra la imagen de satelite obtenida en base a lo anterior:
+Se extraen las bandas B2, B3 y B4 que corresponden al azul, verde y rojo respectivamente, las cuales se utilizarán para mostrar la imagen real del lago. Por otra parte, para la detección del ecosistema se usará el Normalized Difference Water Index (NDWI) ya que este permite la detección de cuerpos de agua, y por lo tanto se extrae también la banda B5 que es necesaria para este cálculo. A continuación se muestra la imagen de satélite obtenida en base a lo anterior:
 
 ```{r fig.align = 'center'}
 # Se seleccionan las bandas a extraer
@@ -131,9 +131,9 @@ Como se ve en el gráfico, las áreas con índice NDWI mayor a alrededor de 0.2 
 
 ## Procesamiento y limpieza de datos
 
-Ahora bien, para poder analizar la accesibilidad en base a lo anteriormente planteado se requieren los datos del lago, de las áreas urbanas y de las calles de Chile, así como también información referente a la elevación del terreno del área de interés. Se obtienen las áreas urbanas y calles a partir de la data del Censo 2017, el polígono del lago desde Google Earth Engine y la elevación del terreno de xxx(idk de donde la sacaste).
+Ahora bien, para poder analizar la accesibilidad en base a lo anteriormente planteado se requieren los datos del lago, de las áreas urbanas y de las calles de Chile, así como también información referente a la elevación del terreno del área de interés. Se obtienen las áreas urbanas y calles a partir de la data del Censo 2017, el polígono del lago desde Google Earth Engine y la elevación del terreno del sitio web earthexplorer.usgs.gov.
 
-Se procede a limpiar la data, filtrando las calles y límites urbanos para obtener solo aquellos que corresponden al área de interés, es decir, a Cunco. Posteriormente se filtran dichas calles por distancia al lago, es decir, se eliminan todas las calles que se encuentren a una distancia mayor a aproximadamente 890 m, valor que fue determinado visualmente, iterando cantidades hasta encontrar una que capturara todos los caminos que verdaderamente llegan hasta el lago.
+Se procede a limpiar la data, filtrando las calles y límites urbanos para obtener solo aquellos que corresponden al área de interés, es decir, a Cunco. Posteriormente se filtran dichas calles por distancia al lago, es decir, se eliminan todas las calles que se encuentren a una distancia mayor a aproximadamente 890 metros, valor que fue determinado visualmente, iterando cantidades hasta encontrar una que capturara todos los caminos que verdaderamente llegan hasta el lago.
 
 ```{r include=FALSE, warning=FALSE}
 # Leemos la data
@@ -185,7 +185,7 @@ s503 <- na.omit(calles_filtrado[(calles_filtrado$NOMBRE_VIA == 'S-503'),])
 rmarkdown::paged_table(s503)
 ```
 
-Como se requiere evaluar la accesibilidad desde Cunco hasta el lago, se requiere tener estas vías completas. Por ello, se procede a juntar todos los pedazos de la vía en una sola línea, generando una única entrada al dataframe que contiene las calles mencionadas en su totalidad.
+Como se requiere evaluar la accesibilidad desde Cunco hasta el lago, se necesita tener estas vías completas. Por ello, se procede a juntar todos los pedazos de la vía en una sola línea, generando una única entrada al dataframe que contiene las calles mencionadas en su totalidad.
 
 ```{r}
 # Obtenemos la via s-503 completa
@@ -259,7 +259,7 @@ Como se puede observar en el mapa, las rutas de calles principales y secundarias
 
 ### Obstrucciones
 
-Como se mencionó anteriormente, en este punto se evaluarán la cantidad de obstrucciones que impedrían por completo el acceso al ecosistema. En este caso, como se puede observar en el mapa anterior, la vía S-75 es completamente necesaria para poder acceder al lago desde Cunco, por lo tanto, un cierre de esta vía por sobre el lugar donde se conecta con la R-662 imposibilitaría la llegada. Por lo anterior, se le asigna un puntaje de 1 en esta categoría.
+Como se mencionó anteriormente, en este punto se evaluarán la cantidad de obstrucciones que impedirían por completo el acceso al ecosistema. En este caso, como se puede observar en el mapa anterior, la vía S-75 es completamente necesaria para poder acceder al lago desde Cunco, por lo tanto, un cierre de esta vía por sobre el lugar donde se conecta con la R-662 imposibilitaría la llegada. Por lo anterior, se le asigna un puntaje de 1 en esta categoría.
 
 ### Elevación del Terreno
 
@@ -292,7 +292,7 @@ r2 <- mask(r1, limite_urbano, inverse = T)
 plot(r2, main = "Elevación del Terreno entre Cunco y el Lago Collico")
 ```
 
-Al analizar el mapa obtenido se observa que el lago Collico presenta una alta variabilidad en la elevación del terreno por su zona noreste y una baja variabilidad en el area noroeste. De esta manera, el mapa sugiere que las zonas de fácil acceso tomando en consideración la elevación del terreno se encuentran por la zona noroeste del lago. La vía de la S-75 bordea al lago por esta zona, pero se encuentra cerca del lago y no en la zona de más alta elevación. Por lo anterior, se le asigna un puntaje de 2 en esta categoría, lo que implica que hay zonas elevadas pero estas no dificultan demasiado el acceso a la zona.
+Al analizar el mapa obtenido se observa que el lago Collico presenta una alta variabilidad en la elevación del terreno por su zona noreste y una baja variabilidad en el área noroeste. De esta manera, el mapa sugiere que las zonas de fácil acceso tomando en consideración la elevación del terreno se encuentran por la zona noroeste del lago. La vía de la S-75 bordea al lago por esta zona, pero se encuentra cerca del lago y no en la zona de más alta elevación. Por lo anterior, se le asigna un puntaje de 2 en esta categoría, lo que implica que hay zonas elevadas pero estas no dificultan demasiado el acceso a la zona.
 
 ### Puntaje final
 
@@ -307,4 +307,4 @@ El puntaje obtenido es de 1,67 y entra dentro de la categoría de accesibilidad 
 
 ## Conclusiones
 
-Dados los resultados obtenidos en los análisis anteriormente mencionados se concluye que el nivel de accesibilidad que presenta el lago Collico desde Cunco es medio, lo cual implica que existen algunas dificultades para acceder al ecosistema, en este caso, estas están relacionadas con la elevación del terreno de la zona noroeste, la limitada cantidad de rutas desde el centro urbano al lago y el hecho de que una obstrucción de una vía (S-75) impide por completo el acceso al lago.
+Dados los resultados obtenidos en los análisis anteriormente mencionados se concluye que el nivel de accesibilidad que presenta el lago Collico desde Cunco es medio, lo cual implica que existen algunas dificultades para acceder al ecosistema, en este caso, estas están relacionadas con la elevación del terreno de la zona noroeste, la limitada cantidad de rutas desde el centro urbano al lago y el hecho de que una obstrucción de una vía (S-75) impide por completo el acceso al lago. Como consideración adicional, se debe tener en cuenta que el área de estudio se encuentra en una región con un clima frío y lluvioso, lo que aumenta los riesgos de accidentes automovilísticos y podría provocar una obstrucción en las rutas críticas para la accesibilidad del ecosistema.
