@@ -1,5 +1,10 @@
 ---
 title: "Proyecto 2"
+knit: (function(input_file, encoding) {
+    out_dir <- 'docs';
+    rmarkdown::render(input_file,
+      encoding=encoding,
+      output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
 author: "Diana Mariño y José Ignacio Miquel"
 date: '2022-06-04'
 output: 
@@ -19,7 +24,7 @@ Para el presente informe se selecciona como ecosistema el lago Collico, localiza
 Con el propósito de estimar la accesibilidad del lago desde Cunco se define "accesibilidad", en líneas generales, como el nivel de dificultad para llegar desde Cunco al lago, lo cual está determinado por la cantidad de vías de acceso desde el centro urbano al ecosistema, el riesgo que representan las obstrucciones o cierres de vías y el nivel de elevación del terreno en el área. Para medirla se obtendrá un score con valores del 0 al 3, el cual se calculará como el promedio de los puntajes asignados en los tres aspectos mencionados: rutas, obstrucciones y elevación del terreno, para los cuales se realizará un análisis y se asignará un valor (0, 1, 2 o 3) según los criterios definidos en cada caso. Según ese puntaje, la accesibilidad se definirá de la siguiente manera:
 
 | Valores |                                   Significado                                    |
-|:----------------:|:----------------------------------------------------:|
+|:-----------------:|:---------------------------------------------------:|
 |    0    |           Accesibilidad nula, no existe forma de llegar al ecosistema            |
 |  (0,1]  |    Accesibilidad baja, existen muchas dificultades para llegar al ecosistema     |
 |  (1,2]  |   Accesibilidad media, existen algunas dificultades para llegar al ecosistema    |
@@ -32,7 +37,7 @@ A continuación se defininen los criterios utilizados para la evaluación de cad
 Se considera la cantidad de rutas que permiten llegar directamente desde el centro urbano hasta el lago, para esto se toman en cuenta las calles principales y secundarias que llevan hasta la periferia del lago.
 
 | Valores |                                  Significado                                  |
-|:----------------:|:----------------------------------------------------:|
+|:-----------------:|:---------------------------------------------------:|
 |    0    |     No hay rutas que permitan llegar al ecosistema desde el centro urbano     |
 |    1    |    Existe una única ruta para llegar al ecosistema desde el centro urbano     |
 |    2    |  Existen entre 2 y 3 rutas para llegar al ecosistema desde el centro urbano   |
@@ -43,7 +48,7 @@ Se considera la cantidad de rutas que permiten llegar directamente desde el cent
 Se evalua la cantidad mínima de obstrucciones, es decir, corte u obstaculización de alguna ruta, que impedirían por completo llegar al ecosistema. Para la asignación de los puntajes se utiliza el siguiente criterio:
 
 | Valores |                                  Significado                                  |
-|:----------------:|:---------------------------------------------------:|
+|:-----------------:|:---------------------------------------------------:|
 |    0    |                   El ecosistema está obstruido naturalmente                   |
 |    1    |      Es necesaria una obstrucción para impedir la llegada al ecosistema       |
 |    2    |    Son necesarias dos obstrucciones para impedir la llegada al ecosistema     |
@@ -54,7 +59,7 @@ Se evalua la cantidad mínima de obstrucciones, es decir, corte u obstaculizaci�
 Se toma en cuenta el nivel de elevación del terreno en las zonas que rodean al ecosistema, así como también en las zonas entre el centro urbano y el lago, ya que se considera que la presencia de áreas de relieve muy variado o de alta elevación dificultan la accesibilidad al lugar. El criterio de asignación de puntaje definido es el siguiente:
 
 | Valores |                                                        Significado                                                         |
-|:----------------:|:---------------------------------------------------:|
+|:-----------------:|:---------------------------------------------------:|
 |    0    |                                La elevación del terreno bloquea por completo al ecosistema                                 |
 |    1    | La elevación del terreno dificulta en gran medida el acceso (Ej: todas o la mayoría de las rutas pasan por zonas elevadas) |
 |    2    |          Hay zonas elevadas que no afectan demasiado el acceso (Ej: alguna(s) ruta(s) pasa(n) por zonas elevadas)          |
