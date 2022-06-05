@@ -1,0 +1,305 @@
+---
+title: "Proyecto 2"
+author: "Diana Mariño y José Ignacio Miquel"
+date: '2022-06-04'
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Definición de área de estudio, ecosistema y accesibilidad
+
+Para el presente informe se selecciona como ecosistema el lago Collico, localizado en la región de la Araucanía en Chile al sur del centro urbano llamado Cunco. Dado lo anterior, se define un área de estudio que contiene tanto Cunco como el lago Collico.
+
+Con el propósito de estimar la accesibilidad del lago desde Cunco se define "accesibilidad", en líneas generales, como el nivel de dificultad para llegar desde Cunco al lago, lo cual está determinado por la cantidad de vías de acceso desde el centro urbano al ecosistema, el riesgo que representan las obstrucciones o cierres de vías y el nivel de elevación del terreno en el área. Para medirla se obtendrá un score con valores del 0 al 3, el cual se calculará como el promedio de los puntajes asignados en los tres aspectos mencionados: rutas, obstrucciones y elevación del terreno, para los cuales se realizará un análisis y se asignará un valor (0, 1, 2 o 3) según los criterios definidos en cada caso. Según ese puntaje, la accesibilidad se definirá de la siguiente manera:
+
+| Valores |                                   Significado                                    |
+|:----------------:|:----------------------------------------------------:|
+|    0    |           Accesibilidad nula, no existe forma de llegar al ecosistema            |
+|  (0,1]  |    Accesibilidad baja, existen muchas dificultades para llegar al ecosistema     |
+|  (1,2]  |   Accesibilidad media, existen algunas dificultades para llegar al ecosistema    |
+|  (2,3]  | Accesibilidad alta, existen pocas o nulas dificultades para llegar al ecosistema |
+
+A continuación se defininen los criterios utilizados para la evaluación de cada aspecto considerado.
+
+### Rutas
+
+Se considera la cantidad de rutas que permiten llegar directamente desde el centro urbano hasta el lago, para esto se toman en cuenta las calles principales y secundarias que llevan hasta la periferia del lago.
+
+| Valores |                                  Significado                                  |
+|:----------------:|:----------------------------------------------------:|
+|    0    |     No hay rutas que permitan llegar al ecosistema desde el centro urbano     |
+|    1    |    Existe una única ruta para llegar al ecosistema desde el centro urbano     |
+|    2    |  Existen entre 2 y 3 rutas para llegar al ecosistema desde el centro urbano   |
+|    3    | Existen entre más de 3 rutas para llegar al ecosistema desde el centro urbano |
+
+### Obstrucciones
+
+Se evalua la cantidad mínima de obstrucciones, es decir, corte u obstaculización de alguna ruta, que impedirían por completo llegar al ecosistema. Para la asignación de los puntajes se utiliza el siguiente criterio:
+
+| Valores |                                  Significado                                  |
+|:----------------:|:---------------------------------------------------:|
+|    0    |                   El ecosistema está obstruido naturalmente                   |
+|    1    |      Es necesaria una obstrucción para impedir la llegada al ecosistema       |
+|    2    |    Son necesarias dos obstrucciones para impedir la llegada al ecosistema     |
+|    3    | Son necesarias tres o más obstrucciones para impedir la llegada al ecosistema |
+
+### Elevación del terreno
+
+Se toma en cuenta el nivel de elevación del terreno en las zonas que rodean al ecosistema, así como también en las zonas entre el centro urbano y el lago, ya que se considera que la presencia de áreas de relieve muy variado o de alta elevación dificultan la accesibilidad al lugar. El criterio de asignación de puntaje definido es el siguiente:
+
+| Valores |                                                        Significado                                                         |
+|:----------------:|:---------------------------------------------------:|
+|    0    |                                La elevación del terreno bloquea por completo al ecosistema                                 |
+|    1    | La elevación del terreno dificulta en gran medida el acceso (Ej: todas o la mayoría de las rutas pasan por zonas elevadas) |
+|    2    |          Hay zonas elevadas que no afectan demasiado el acceso (Ej: alguna(s) ruta(s) pasa(n) por zonas elevadas)          |
+|    3    |                                              No hay zonas elevadas en el área                                              |
+
+Cabe mencionar que una limitación importante de este estudio es que la forma de medir los aspectos relacionados con la accesibilidad y de definir los puntajes resulta subjetiva y depende, en gran medida, del criterio de los miembros del equipo; por tanto, esto es un aspecto a mejorar en futuros estudios.
+
+## Detección de ecosistemas utilizando GEE
+
+Para la detección de ecosistemas, en primer lugar, se inicializa Google Earth Engine para poder obtener las imágenes de los satélites. Posteriormente, se define la región de interés a analizar, que en este caso corresponde al Lago Collico y sus alrededores, por lo que se toman como base las coordenadas de un punto central dentro del lago y se define un área de buffer alrededor.
+
+```{r echo=FALSE}
+
+pacman::p_load(tidyverse, rgee, sf, raster, tmap) 
+
+ee_Initialize(drive = T)
+```
+
+```{r message=FALSE, warning=FALSE, error=FALSE}
+# Se selecciona el área de estudio
+roi <- 
+  c( -71.9745410, -39.086577) %>%  # Se le pasan coordenadas del Lago Collico
+  st_point(dim = "XYZ") %>% 
+  st_buffer(dist = 0.109) %>% 
+  sf_as_ee()
+
+# Se especifica que se obtendran imágenes del Landsat para el área de interés y se filtran para quedarse solo con aquellas que corresponden a días en que no habían demasiadas nubes
+disponible <- ee$ImageCollection('LANDSAT/LC08/C01/T1_TOA')$
+  filterBounds(roi)$
+  filterMetadata('CLOUD_COVER','less_than', 5)
+
+# Se ordena por fechas
+df_disponible <- ee_get_date_ic(disponible)%>%
+  arrange(time_start)
+
+# Se selecciona una imagen en particular
+escena <- df_disponible$id[10]
+```
+
+Se extraen las bandas B2, B3 y B4 que corresponden al azul, verde y rojo respectivamente, las cuales se utilizarán para mostrar la imagen real del lago. Por otra parte, para la detección del ecosistema se usará el Normalized Difference Water Index (NDWI) ya que este permite la detección de cuerpos de agua, y por lo tanto se extrae también la banda B5 que es necesaria para este cálculo. A continuación se muestra la imagen de satelite obtenida en base a lo anterior:
+
+```{r fig.align = 'center'}
+# Se seleccionan las bandas a extraer
+l8_bands <- ee$Image(escena)$select(c("B2", "B3", "B4","B5"))
+# B1: Aerosol, B2: Blue, B3: Green, B4: Red
+# B5: NIR, B6: SWIR 1, B7: SWIR 2, B9: Cirrus
+
+# Finalmente se extraen las bandas escogidas para la región de interés
+l8_img <- ee_as_raster(
+  image = l8_bands,
+  region = roi$bounds(),
+  scale = 30)
+
+# Se gráfica con las bandas B2, B3 y B4
+plotRGB(l8_img, r=3, g=2, b=1, stretch = "lin")
+```
+
+Y en el siguiente gráfico se puede visualizar el área identificada como cuerpo de agua, que en este caso corresponde al Lago Collico.
+
+```{r fig.align = 'center'}
+# Se llaman a las funciones para calcular el índice relevante, que en este caso es el Normalized Difference Water Index
+source("indices.R")
+deteccion_lago <- NDWI(l8_img)
+plot(deteccion_lago)
+
+```
+
+Como se ve en el gráfico, las áreas con índice NDWI mayor a alrededor de 0.2 son aquellas en las que se encuentra el agua, lo cual se ve representado en verde.
+
+## Procesamiento y limpieza de datos
+
+Ahora bien, para poder analizar la accesibilidad en base a lo anteriormente planteado se requieren los datos del lago, de las áreas urbanas y de las calles de Chile, así como también información referente a la elevación del terreno del área de interés. Se obtienen las áreas urbanas y calles a partir de la data del Censo 2017, el polígono del lago desde Google Earth Engine y la elevación del terreno de xxx(idk de donde la sacaste).
+
+Se procede a limpiar la data, filtrando las calles y límites urbanos para obtener solo aquellos que corresponden al área de interés, es decir, a Cunco. Posteriormente se filtran dichas calles por distancia al lago, es decir, se eliminan todas las calles que se encuentren a una distancia mayor a aproximadamente 890 m, valor que fue determinado visualmente, iterando cantidades hasta encontrar una que capturara todos los caminos que verdaderamente llegan hasta el lago.
+
+```{r include=FALSE, warning=FALSE}
+# Leemos la data
+calles <- st_read("Data/R09/R09/CALLES_PAIS_C17.shp")
+lake <- st_read("Lake/Shapefile.shp")
+limite_urbano <- st_read("Data/R09/R09/LIMITE_URBANO_CENSAL_C17.shp") 
+
+# Filtramos las calles para obtener solo las que corresponden a Cunco
+calles_filtrado <- calles[(calles$COMUNA == 'CUNCO'),]
+# Filtramos las áreas urbanas de la misma forma
+cunco <- limite_urbano[(limite_urbano$URBANO == 'CUNCO'),]
+
+# Se extrae el coordinate reference system de las calles para transformar las del lago al mismo sistema
+crs_to_use <- st_crs(calles_filtrado$geometry) 
+crs_epsg <- crs_to_use$epsg
+lake$geometry <- st_transform(lake$geometry,crs=crs_epsg)
+lake$name <- "Lago Collico"
+
+# Se calcula la distancia entre todas las calles y el lago
+distance <- st_distance(lake$geometry, calles_filtrado$geometry)
+# Se evalua cuales distancias estan por debajo de cierto valor
+distance_calles <- distance[1,] < distance[1,196]
+# Se filtra la base de datos seleccionando solo las calles que cumplen el criterio anterior
+calles_en_contacto <- subset(calles_filtrado, eval(distance_calles))
+```
+
+En el set de datos resultantes existen numerosas filas cuyo valor de la columna "NOMBRE_VIA", que corresponde al nombre de la calle, es nulo, por lo cual se decide renombrarlos. Como se muestra a continuación, todos los datos sin nombre corresponden a caminos o huellas, se renombran como "Camino sin nombre" o "Huella sin nombre" respectivamente.
+
+```{r warning=FALSE}
+
+# Se muestran los tipos de vías de los datos con nombre nulo
+print(unique(calles_en_contacto[is.na(calles_en_contacto$NOMBRE_VIA),]$CLASE_COMU))
+# Reemplazamos las calles con nombre nulo por "Camino sin nombre" o "Huella sin nombre" segun corresponda 
+calles_en_contacto$NOMBRE_VIA[is.na(calles_en_contacto$NOMBRE_VIA)] <- ifelse(calles_en_contacto$CLASE_COMU == "CAMINO", "Camino sin nombre", "Huella sin nombre")
+```
+
+A partir de lo anterior se grafica y se nota que algunas calles principales y secundarias están incompletas, lo cual ocurre porque no están guardadas como una sola fila que tiene toda la vía en una línea, sino como varias filas que tienen líneas que son fragmentos de la vía entera. Lo anterior se visualiza en la siguiente tabla para el caso de la calle secundaria S-503:
+
+```{r fig.align = 'center'}
+tmap_mode("view")
+  tm_shape(lake)+
+  tm_polygons(col ="name",title="Cuerpo de agua")+
+  tm_shape(calles_en_contacto)+
+  tm_lines(col ="NOMBRE_VIA", id="NOMBRE_VIA", scale=5, palette="Accent", title.col="Nombre de las vías")+
+  tm_basemap(leaflet::providers$Esri.WorldImagery)+
+  tm_shape(cunco)+
+  tm_polygons("NOM_COMUNA", palette ="Pastel1", id="NOM_COMUNA",title="Área urbana")
+s503 <- na.omit(calles_filtrado[(calles_filtrado$NOMBRE_VIA == 'S-503'),])
+rmarkdown::paged_table(s503)
+```
+
+Como se requiere evaluar la accesibilidad desde Cunco hasta el lago, se requiere tener estas vías completas. Por ello, se procede a juntar todos los pedazos de la vía en una sola línea, generando una única entrada al dataframe que contiene las calles mencionadas en su totalidad.
+
+```{r}
+# Obtenemos la via s-503 completa
+s503 <- na.omit(calles_filtrado[(calles_filtrado$NOMBRE_VIA == 'S-503'),])
+u <- st_union(s503$geometry)
+calles_en_contacto <- subset(calles_en_contacto, NOMBRE_VIA!="S-503")
+s503_u <- s503[1,]
+s503_u$geometry <- u
+calles_en_contacto[nrow(calles_en_contacto) + 1,] <- s503_u
+
+# Obtenemos la via R-662 completa
+r662 <- na.omit(calles_filtrado[(calles_filtrado$NOMBRE_VIA == 'R-662'),])
+u <- st_union(r662$geometry)
+calles_en_contacto <- calles_en_contacto[!(calles_en_contacto$NOMBRE_VIA == 'R-662'),]
+r662_u <- r662[1,]
+r662_u$geometry <- u
+calles_en_contacto[nrow(calles_en_contacto) + 1,] <- r662_u
+
+# Obtenemos la via S-521 completa
+S521 <- na.omit(calles_filtrado[(calles_filtrado$NOMBRE_VIA == 'S-521'),])
+u <- st_union(S521$geometry)
+calles_en_contacto <- calles_en_contacto[!(calles_en_contacto$NOMBRE_VIA == 'S-521'),]
+S521_u <- S521[1,]
+S521_u$geometry <- u
+calles_en_contacto[nrow(calles_en_contacto) + 1,] <- S521_u
+
+# Obtenemos la via S-75 completa
+S75 <- na.omit(calles_filtrado[(calles_filtrado$NOMBRE_VIA == 'S-75'),])
+u <- st_union(S75$geometry)
+calles_en_contacto <- calles_en_contacto[!(calles_en_contacto$NOMBRE_VIA == 'S-75'),]
+S75_u <- S75[1,]
+S75_u$geometry <- u
+calles_en_contacto[nrow(calles_en_contacto) + 1,] <- S75_u
+```
+
+Finalmente, se obtiene el mapa con las vías principales y secundarias completas:
+
+```{r fig.align = 'center'}
+tmap_mode("view")
+  tm_shape(lake)+
+  tm_polygons(col ="name",title="Cuerpo de agua")+
+  tm_shape(calles_en_contacto)+
+  tm_lines(col ="NOMBRE_VIA", id="NOMBRE_VIA", scale=5, palette="Accent", title.col="Nombre de las vías")+
+  tm_basemap(leaflet::providers$Esri.WorldImagery)+
+  tm_shape(cunco)+
+  tm_polygons("NOM_COMUNA", palette ="Pastel1", id="NOM_COMUNA",title="Área urbana")
+```
+
+## Cálculo de accesibilidad
+
+A continuación se presentan los aspectos que se analizaron para calcular la accesibilidad del lago Collico desde Cunco.
+
+### Rutas
+
+```{r fig.align = 'center'}
+calles_pys <- subset(calles_en_contacto, CLASE_COMU!="HUELLA")
+calles_pys <- subset(calles_pys, CLASE_COMU!="CAMINO")
+
+tmap_mode("view")
+  tm_shape(lake)+
+  tm_polygons(col ="name",title="Cuerpo de agua")+
+  tm_shape(calles_pys)+
+  tm_lines(col ="NOMBRE_VIA", id="NOMBRE_VIA", scale=5, palette="Accent", title.col="Nombre de las vías")+
+  tm_basemap(leaflet::providers$Esri.WorldImagery)+
+  tm_shape(cunco)+
+  tm_polygons("NOM_COMUNA", palette ="Pastel1", id="NOM_COMUNA",title="Área urbana")
+
+```
+
+Como se puede observar en el mapa, las rutas de calles principales y secundarias que permiten acceder al lago son: la S-75 por sí sola y la combinación de la S-75 con la R-662 y la S-503. La S-521 permite el acceso desde la zona sur, pero se considera que es solo una extensión de la ruta de la S-75, por lo que no se cuenta como una adicional. Al considerarse que hay 2 rutas, se le asigna un puntaje de 2 en esta categoría.
+
+### Obstrucciones
+
+Como se mencionó anteriormente, en este punto se evaluarán la cantidad de obstrucciones que impedrían por completo el acceso al ecosistema. En este caso, como se puede observar en el mapa anterior, la vía S-75 es completamente necesaria para poder acceder al lago desde Cunco, por lo tanto, un cierre de esta vía por sobre el lugar donde se conecta con la R-662 imposibilitaría la llegada. Por lo anterior, se le asigna un puntaje de 1 en esta categoría.
+
+### Elevación del Terreno
+
+Para evaluar este ámbito se decidió realizar un mapa de elevación del terreno que permita evaluar la dificultad de acceso al ecosistema en cuestión. Se asume que un terreno con alta variabilidad en su elevación presenta una mayor dificultad para ser transitado.
+
+```{r message=FALSE, warning=FALSE, error=FALSE}
+# Se carga la data que contiene al area de estudio
+sl1 <- raster("Terrain Elevation Map/data 1.tif")
+sl2 <- raster("Terrain Elevation Map/data 2.tif")
+sl3 <- raster("Terrain Elevation Map/data 3.tif")
+sl4 <- raster("Terrain Elevation Map/data 4.tif")
+
+# Se une la data
+sl <- mosaic(sl1, sl2, sl3, sl4, fun=min)
+
+# Se selecciona acota la data al área de estudio
+e <- as(extent(-72.2, -71.8, -39.12, -38.8), 'SpatialPolygons')
+crs(e) <- "+proj=longlat +datum=WGS84 +no_defs"
+r <- crop(sl, e)
+
+# Se cargan los polígonos de Cunco y el lago Collico
+limite_urbano <- st_read("Data/R09/R09/LIMITE_URBANO_CENSAL_C17.shp")
+collico <- st_read("./Terrain Elevation Map/Lago Collico.shp")
+
+# Se remueven los polígonos del mapa para su fácil identificación dentro del mapa
+r1 <- mask(r, collico, inverse = T)
+r2 <- mask(r1, limite_urbano, inverse = T)
+
+# Se muestra el mapa obtenido
+plot(r2, main = "Elevación del Terreno entre Cunco y el Lago Collico")
+```
+
+Al analizar el mapa obtenido se observa que el lago Collico presenta una alta variabilidad en la elevación del terreno por su zona noreste y una baja variabilidad en el area noroeste. De esta manera, el mapa sugiere que las zonas de fácil acceso tomando en consideración la elevación del terreno se encuentran por la zona noroeste del lago. La vía de la S-75 bordea al lago por esta zona, pero se encuentra cerca del lago y no en la zona de más alta elevación. Por lo anterior, se le asigna un puntaje de 2 en esta categoría, lo que implica que hay zonas elevanas pero estas no dificultan demasiado el acceso a la zona.
+
+### Puntaje final
+
+| Categoría            | Puntaje |
+|----------------------|:-------:|
+| Rutas                |    2    |
+| Obstrucciones        |    1    |
+| Elevación de terreno |    2    |
+| **Total**            |  1,67   |
+
+El puntaje obtenido es de 1,67 y entra dentro de la categoría de accesibilidad media.
+
+## Conclusiones
+
+Dados los resultados obtenidos en los análisis anteriormente mencionados se concluye que el nivel de accesibilidad que presenta el lago Collico desde Cunco es medio, lo cual implica que existen algunas dificultades para acceder al ecosistema, en este caso, estas están relacionadas con la elevación del terreno de la zona noroeste, la limitada cantidad de rutas desde el centro urbano al lago y el hecho de que una obstrucción de una vía (S-75) impide por completo el acceso al lago.
